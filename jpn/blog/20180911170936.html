@@ -1,0 +1,389 @@
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://zohen0.github.io/assets/highlight/styles/default.css">
+    <script src="https://zohen0.github.io/assets/highlight/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <style>
+      body {
+        background: #f0f0f0;
+      }
+      table, td, th, tr{
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+      }
+      .index {
+        background: #f0f0f0;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
+      #main-content {
+        width: 1000;
+        padding: 50;
+        margin: auto;
+        background: white;
+        padding;
+      }
+    </style>
+    <title>CyberRebeatCTFの参戦記とwriteup</title>
+  </head>
+  <body>
+    <div id="main-content">
+      <h1>CyberRebeatCTFの参戦記とwriteup</h1>
+      <div class="index">
+        目次<br>
+        
+        <a href="#1">1. 参戦記</a><br>
+        <a href="#2">2. writeup</a><br>
+        &nbsp;&nbsp;<a href="#2-1">2-1. SimpleBinary</a><br>
+        &nbsp;&nbsp;<a href="#2-2">2-2. crackme</a><br>
+        &nbsp;&nbsp;<a href="#2-3">2-3. f31337</a><br>
+        <a href="#3">3. 感想</a><br>
+        <a href="#4">4. 関連リンク</a><br>
+      </div>
+      <h2 id="1">1. 参戦記</h2>
+      <p>
+        <a href="https://cyberrebeat.adctf.online/">CyberRebeatCTF</a>に<a href="https://seikatsubreaker.github.io/">生活習慣崩壊ズ</a>で参加した。ちょうど同じ日に渋渋の文化祭があって僕とkeymoonと漁師が遊びに来ていたので、文化祭の後に渋谷で集まってオンサイトCTF(？)をやった。漁師とkeymoonとえかすどが大量に問題を解いていてプロかった。8日の夜に全完を達成して同立一位に並んだ。やったね 僕は例によってbinary以外に手をつけてません そろそろこれもやめたいね
+      </p>
+      <h2 id="2">2. writeup</h2>
+      <p>
+        一応アセンブラの知識があんまりない人でもなんとなく解法の流れをつかめるくらいには細かく解説したつもりなんですけど、わかりにくかったら<a href="https://twitter.com/zohen0">Twitter: @zohen0</a>あたりに文句を投げてください
+      </p>
+      <h3 id="2-1">2-1. SimpleBinary</h3>
+      <p>
+        ELFフォーマットのx86-64の実行可能ファイルが一つ与えられる。早速radare2で逆アセンブルをかけてみると
+      </p>
+      <img src="img0.png" width="726">
+      <p>
+        こうなる。以下アセンブリを大雑把に説明していく。
+      </p>
+      <pre><code class="x86asm">push rbp
+mov rbp, rsp
+sub rsp, 0x50
+mov dword [local_44h], edi
+mov qword [local_50h], rsi
+mov rax, qword fs:[0x28]
+mov qword [local_8h], rax
+xor eax, eax
+</code></pre>
+      <p>
+          この部分は卍おまじない卍であって本質にはあまり関係ないので飛ばす。次。
+      </p>
+      <pre><code class="x86asm">movabs rax, 0x69732e204343697b
+mov qword [local_30h], rax
+</code></pre>
+      <p>
+        rbp-0x30を始点に8バイトを代入している。この結果メモリは以下のような状態になる。
+      </p>
+      <table>
+        <tr><td>rbp-0x30</td><td>0x7b</td><td>rbp-0x22</td><td> - </td></tr>
+        <tr><td>rbp-0x2f</td><td>0x69</td><td>rbp-0x21</td><td> - </td></tr>
+        <tr><td>rbp-0x2e</td><td>0x43</td><td>rbp-0x20</td><td> - </td></tr>
+        <tr><td>rbp-0x2d</td><td>0x43</td><td>rbp-0x1f</td><td> - </td></tr>
+        <tr><td>rbp-0x3c</td><td>0x20</td><td>rbp-0x1e</td><td> - </td></tr>
+        <tr><td>rbp-0x2b</td><td>0x2e</td><td>rbp-0x1d</td><td> - </td></tr>
+        <tr><td>rbp-0x2a</td><td>0x73</td><td>rbp-0x1c</td><td> - </td></tr>
+        <tr><td>rbp-0x29</td><td>0x69</td><td>rbp-0x1b</td><td> - </td></tr>
+        <tr><td>rbp-0x28</td><td> - </td><td>rbp-0x1a</td><td> - </td></tr>
+        <tr><td>rbp-0x27</td><td> - </td><td>rbp-0x19</td><td> - </td></tr>
+        <tr><td>rbp-0x26</td><td> - </td><td>rbp-0x18</td><td> - </td></tr>
+        <tr><td>rbp-0x25</td><td> - </td><td>rbp-0x17</td><td> - </td></tr>
+        <tr><td>rbp-0x24</td><td> - </td><td>rbp-0x16</td><td> - </td></tr>
+        <tr><td>rbp-0x23</td><td> - </td>
+      </table>
+      <pre><code class="x86asm">movabs rax, 0x4620752774206874
+mov qword [local_28h], rax
+</code></pre>
+      <p>
+        と
+      </p>
+      <pre><code class="x86asm">movabs rax, 0x6167546d49647d6e
+mov qword [local_20h], rax
+</code></pre>
+      <p>
+         と
+      </p>
+      <pre><code class="x86asm">mov word [local_18h], 0x6852
+mov byte [local_16h], 0
+</code></pre>
+      <p>
+        も同様の処理を行っている。最終的にメモリはこう↓なる。
+      </p>
+      <table>
+        <tr><td>rbp-0x30</td><td>0x7b</td><td>rbp-0x22</td><td>0x20</td></tr>
+        <tr><td>rbp-0x2f</td><td>0x69</td><td>rbp-0x21</td><td>0x46</td></tr>
+        <tr><td>rbp-0x2e</td><td>0x43</td><td>rbp-0x20</td><td>0x6e</td></tr>
+        <tr><td>rbp-0x2d</td><td>0x43</td><td>rbp-0x1f</td><td>0x7d</td></tr>
+        <tr><td>rbp-0x3c</td><td>0x20</td><td>rbp-0x1e</td><td>0x64</td></tr>
+        <tr><td>rbp-0x2b</td><td>0x2e</td><td>rbp-0x1d</td><td>0x49</td></tr>
+        <tr><td>rbp-0x2a</td><td>0x73</td><td>rbp-0x1c</td><td>0x6d</td></tr>
+        <tr><td>rbp-0x29</td><td>0x69</td><td>rbp-0x1b</td><td>0x54</td></tr>
+        <tr><td>rbp-0x28</td><td>0x74</td><td>rbp-0x1a</td><td>0x67</td></tr>
+        <tr><td>rbp-0x27</td><td>0x68</td><td>rbp-0x19</td><td>0x61</td></tr>
+        <tr><td>rbp-0x26</td><td>0x20</td><td>rbp-0x18</td><td>0x52</td></tr>
+        <tr><td>rbp-0x25</td><td>0x74</td><td>rbp-0x17</td><td>0x68</td></tr>
+        <tr><td>rbp-0x24</td><td>0x27</td><td>rbp-0x16</td><td>0x00</td></tr>
+        <tr><td>rbp-0x23</td><td>0x75</td>
+      </table>
+      <p>
+        これらを<code>rbp-0x30</code>を始点とする文字列とすると、<code>rbp-0x30</code>を<code>local_30h[0]</code>として
+      </p>
+      <table>
+        <tr><td>local_30h[0]</td><td>'{'</td><td>local_30h[14]</td><td>' '</td></tr>
+        <tr><td>local_30h[1]</td><td>'i'</td><td>local_30h[15]</td><td>'F'</td></tr>
+        <tr><td>local_30h[2]</td><td>'C'</td><td>local_30h[16]</td><td>'n'</td></tr>
+        <tr><td>local_30h[3]</td><td>'C'</td><td>local_30h[17]</td><td>'}'</td></tr>
+        <tr><td>local_30h[4]</td><td>' '</td><td>local_30h[18]</td><td>'d'</td></tr>
+        <tr><td>local_30h[5]</td><td>'.'</td><td>local_30h[19]</td><td>'I'</td></tr>
+        <tr><td>local_30h[6]</td><td>'s'</td><td>local_30h[20]</td><td>'m'</td></tr>
+        <tr><td>local_30h[7]</td><td>'i'</td><td>local_30h[21]</td><td>'T'</td></tr>
+        <tr><td>local_30h[8]</td><td>'t'</td><td>local_30h[22]</td><td>'g'</td></tr>
+        <tr><td>local_30h[9]</td><td>'h'</td><td>local_30h[23]</td><td>'a'</td></tr>
+        <tr><td>local_30h[10]</td><td>' '</td><td>local_30h[24]</td><td>'R'</td></tr>
+        <tr><td>local_30h[11]</td><td>'t'</td><td>local_30h[25]</td><td>'h'</td></tr>
+        <tr><td>local_30h[12]</td><td>'''</td><td>local_30h[26]</td><td>'\0'</td></tr>
+        <tr><td>local_30h[13]</td><td>'u'</td></tr>
+      </table>
+      <p>
+        こう。
+      </p>
+      <pre><code class="x86asm">mov dword [local_34h], 0x1b
+mov eax, dword [local_34h]
+lea edx, dword [rax - 1]
+lea rax, qword [local_30h]
+mov esi, edx
+mov rdi, rax
+call fcn.00400546
+mov eax, 0
+mov rcx, qword [local_8h] ;ここから先はおまじない
+xor rcx, qword fs:[0x28]
+je 0x400739
+call sym.imp.__stack_chk_fail
+leave
+ret
+</code></pre>
+      <p>
+        <code>esi</code>に<code>local_34h - 1</code>(== 0x1a == 26)を、<code>rdi</code>に<code>local_30h</code>を代入したあとfcn.00400546を呼んでmain内の本処理は終わっている。
+        なのでfcn.00400546内を見ればたぶんflagがわかるんだろう。ということでradare2内で<kbd>pdf @fcn.00400546</kbd>と打ってみると
+      </p>
+      <img src="img1.png" width="861">
+      <img src="img2.png" width="861">
+      <img src="img3.png" width="861">
+      <p>
+        はい。長くてこれを全部解説する気力もないのでCに書き起こしたものだけを提示する。
+      </p>
+      <pre><code class="c">void fcn_00400546(int local_8ch, char *local_88h) {
+  int local_70h[] = {3, 11, 0, 22, 15, 22, 19, 12, 7, 11, 14, 23, 
+                     15, 23, 1, 20, 20, 1, 17, 20, 9, 3, 1, 14, 1, 22};
+
+  for (int local_74h = 0; local_74h < local_8ch; local_74h++) {
+    char local_75h = local_88h[local_74h];
+    local_88h[local_74h] = local_88h[local_70h[local_74h]];
+    local_88h[local_70h[local_74h]] = local_75h;
+  }
+  
+  return;
+}
+</code></pre>
+      <p>
+        見ればわかると思うけど<pre><code class="c">local_88h[local_74h]</code></pre>と<pre><code class="c">local_88h[local_70h[local_74h]]</code></pre>をスワップするのをlocal_8ch回繰り返しているっぽい。
+        ただし渡されたバイナリでは文字列local_88hに対して処理を行った結果が出力されないので、<code>fcn_00400546(0x1b - 1, "{iCC .sith t'u Fn}dImTgaRh")</code>の結果を出力するコードを自前でCで書いた。
+      </p>
+      <pre><code class="c">void fcn_00400546(int local_8ch, char *local_88h) {
+  int local_70h[] = {3, 11, 0, 22, 15, 22, 19, 12, 7, 11, 14, 23, 
+                     15, 23, 1, 20, 20, 1, 17, 20, 9, 3, 1, 14, 1, 22};
+
+  for (int local_74h = 0; local_74h < local_8ch; local_74h++) {
+    char local_75h = local_88h[local_74h];
+    local_88h[local_74h] = local_88h[local_70h[local_74h]];
+    local_88h[local_70h[local_74h]] = local_75h;
+  }
+  
+  puts(local_88h);
+  
+  return;
+}
+
+int main(void) {
+  char local_30h[] = "{iCC .sith t'u Fn}dImTgaRh";
+  
+  fcn_00400546(0x1b - 1, local_30h);
+}
+</code></pre>
+      <pre><code>user@localhost SimpleBinary % gcc solver.c
+user@localhost SimpleBinary % ./a.out     
+<b>CRCTF{It's a humid night.}</b>
+</code></pre>
+      <p>
+        <b>大☆勝☆利</b>（エ） 無事フラグを取れたので提出。AC。
+      </p>
+      <h3 id="2-2">2-2. crackme</h3>
+      <p>
+        実行ファイルっぽいものを与えられるので試しに手元のパソコンで動かしたが<code>zsh: exec format error: ./crackme</code>と怒られてしまう。fileコマンドで確認してみると
+      </p>
+      <pre><code>user@localhost crackme % file ./crackme 
+./crackme: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.3, for GNU/Linux 3.2.0, BuildID[sha1]=e1b0c82beaf7766d8696b9f85d2b17f52ea7fa38, not stripped
+</code></pre>
+      <p>
+         x86ではなくてarmのバイナリだった。
+      </p>
+        <img src="img4.png" height="651">
+        <p>
+          実はarmのアセンブリをまったく知らないのでオペコードなどをググりつつ雰囲気で読んでいった。コマンドライン引数でフラグを受け取ってcheck関数でそれが正しいかを判定するっぽい。ということでcheck関数の中身を覗く。
+        </p>
+        <img src="img5.png" width="861">
+        <p>
+          これも1行ずつ解説していくのは怠いのでCへの書き起こしを代わりにのっけとく。
+        </p>
+        <pre><code class="c">int check(char *local_10h) {
+  char flag_encrypted[24] = {0xb0, 0xa1, 0xb0, 0xa7, 0xb5, 0x88, 0x9b, 0x96, 0x9f, 0x9f, 0x9c, 
+                             0xac, 0xc7, 0x81, 0x9e, 0xac, 0x84, 0x9c, 0x81, 0x9f, 0x97, 0xd2, 0x8e, 0x00};
+  
+  for (local_8h = 0; local_8h < 23; local_8h++)
+    flag_encrypted[local_8h] = ~(flag_encrypted[local_8h] ^ 0xc) & 0xff;
+    
+   return strncmp(flag_encrypted, local_10h, 23);
+}   
+</code></pre>
+       <p>
+         一文字ずつ<code>~(i ^ 0xc)</code>で暗号化を施している。これらの情報をもとにCで↓のようなソルバーを書いた。
+       </p>
+       <pre><code class="c">#include &lt;stdio.h&gt;
+
+int main(void) {
+  int flag_encrypted[23] = {0xb0, 0xa1, 0xb0, 0xa7, 0xb5, 0x88, 0x9b, 0x96, 0x9f, 0x9f, 0x9c, 
+                            0xac, 0xc7, 0x81, 0x9e, 0xac, 0x84, 0x9c, 0x81, 0x9f, 0x97, 0xd2, 0x8e};
+                            
+  for (int i = 0; i < 23; i++)
+    putchar(~(flag_encrypted[i] ^ 0xc) & 0xff);
+    
+  putchar('\n');
+}
+
+</code></pre>
+       <pre><code>user@localhost crackme % gcc solver.c
+user@localhost crackme % ./a.out 
+<b>CRCTF{hello_4rm_world!}</b>
+</code></pre>
+        <p>
+          提出。あってた。おしまい。
+        </p>
+        <h3 id="2-3">2-3. f31337</h3>
+        <p>
+          まず上の二問と同じようにradare2でmainの中身を見てみる。
+         </p>
+        <img src="img6.png" width="780">
+        <pre><code class="x86asm">sub rsp, 0x18
+mov rax, qword fs:[0x28]    ; [0x28:8]=-1 ; '(' ; 40
+mov qword [local_8h], rax
+xor eax, eax
+</code></pre>
+    <p>
+      例によっておまじないなのでとりあえず無視してよし。
+    </p>
+    <pre><code class="x86asm">mov edi, 0x7a69
+call sym.f
+</code></pre>
+    <p>
+      引数に0x7a69を渡してfを呼んでいる。fの中身を調べるのは後回しにしておこう。
+    </p>
+    <pre><code class="x86asm">mov qword [rsp], rax
+</code></pre>
+    <p>
+     [rsp]を始点とした8番地にraxの中身をコピーしている。
+    </p>
+    <pre><code class="x86asm">mov edx, 0
+mov ecx, edx  ;0x40060d
+sar ecx, 0x1f
+shr ecx, 0x1d
+lea eax, dword [rcx + rdx]
+and eax, 7
+sub eax, ecx
+cdqe
+movzx eax, byte [rsp + rax]
+xor byte [rdx + obj.FLAG], al
+add rdx, 1
+cmp rdx, 0x1b               ; 27
+jne 0x40060d
+</code></pre>
+    <p>
+      どうやらこの部分でフラグを復号化しているらしい。なんか<code>cdqe</code>だのなんだのよくわからない命令がたくさん並んでるけどここは気合を入れて読んでいきますわよーッ！(突然のお嬢様口調)for文で書いてみると↓みたいになりますわ。
+    </p>
+    <pre><code class="c">for(register int edx = 0; edx != 27; edx++) {
+  register int ecx = edx;
+  ecx = ecx >> 0x1f >> 0x1d; //0 &lt;= edx &lt; 27のときは常に0なので無視できる
+  flag[edx] ^= rsp[(ecx + edx) % 8 - ecx];  //char rsp[8] = f(0x7a69);
+}
+</code></pre>
+    <p>
+      さて、ここで配列rspに何が入ってるかというとさっきのf(0x71a69)の返り値ですわね それじゃあfの中身をようやくですけど見てみましょうですわ
+    </p>
+    <img src="img7.png" width="522">
+    <p>
+      これくらいなら多分個々の命令の解説はしなくても大丈夫でしょう 再帰でフィボナッチ数列のn項目(n = 0, 1, 2, 3...)を求める関数みたいですわね
+    </p>
+    <pre><code class="x86asm">mov byte [0x0060105b], 0    ; [0x60105b:1]=0
+mov edx, obj.FLAG           ; 0x601040 ; "AO\x1b\xda7\xd8\xf3\xf3P\x16"
+mov esi, str.CRCTF__s__n    ; 0x400704 ; "CRCTF{%s}\n"
+mov edi, 1
+mov eax, 0
+call sym.imp.__printf_chk
+mov eax, 0
+mov rsi, qword [local_8h]   ; [0x8:8]=-1 ; 8 ;ここから先おまじない
+xor rsi, qword fs:[0x28]
+je 0x40066d
+call sym.imp.__stack_chk_fail ; sym.imp.__printf_chk-0x20
+add rsp, 0x18
+ret
+</code></pre>
+  <p>
+    後の部分は復号化したフラグを出力するだけ。十分情報が揃ったのでソルバーを書く。
+  </p>
+  <pre><code class="c">#include &lt;stdio.h&gt;
+
+int main(void) {
+  int flag[27] = {0x41, 0x4f, 0x1b, 0xda, 0x37, 0xd8, 0xf3, 0xf3, 0x50, 0x16, 0x00, 0xcd, 0x37,
+                  0x84, 0xb4, 0xcf, 0x4e, 0x4c, 0x1c, 0xd1, 0x37, 0xd3, 0xf4, 0xe3, 0x4c, 0x5e, 0x4f},
+      key[8] = {0x38, 0x7f, 0x6e, 0xa8, 0x68, 0xb5, 0xc7, 0x90}; //f(0x7a69) == 0x90c7b568a86e7f38 x86はリトルエンディアンなので実際のメモリ上での数値の配列は左のような順番になることに注意
+  
+  printf("CRCTF{");
+  
+  for (int i = 0; i &lt; 27; i++) {
+    putchar(flag[i] ^ key[i % 8]);
+  }
+ 
+  puts("}");
+}
+</code></pre>
+    <p>
+      余談だが、フィボナッチ数列の項を再帰で計算する方法はnが0x7a69みたいに大きい数になると大変な時間がかかってしまいコンテスト開催期間に間に合うかも怪しいくらいなので、動的計画法的(知らない人は「DP フィボナッチ」とかでググって)なやりかたを使った方が絶対に良い。こちらの方法であればn = 0x7a69でも一瞬で答えが得られる。
+    </p>
+    <pre><code>user@localhost f31337 % gcc solver3.c
+user@localhost f31337 % ./a.out      
+<b>CRCTF{y0ur_m4chine_1s_v3ry_f3st!!}</b>
+</code></pre>
+    <p>
+      それっぽいのが出てきた。しかし本番でこのフラグを提出したところ何故か弾かれてしまった。どこで間違えたのかがわからず唸っていたところ、隣の席で他の問題を解いていた漁師が試しに<code>f3st</code>を<code>f4st</code>に変えて再度提出してみたらあっさり通ったらしい。そこまで含めて問題なのかそれとも僕がソルバーを書くときに微妙なミスをしたのかのどっちなのかは知らない。ともかくこれでCyberRebeatCTFのBinary問題を全て解くことができた。めでたしめでたし。
+    </p>
+    <h2 id="3">3. 感想</h2>
+    <p>
+      やっぱり簡単な内容のアセンブリを読むのに時間がかかりすぎている(今回は休憩をはさみつつ3問解くのに6時間かかった)と自分でも思うのでとにかく経験を積んで問題を解くスピードを上げていきたい。あと他のメンバー3人がいろんな分野の問題を大量に通していってる間に僕はのんびりBinaryだけやってるっていうのもなんか悲しいのでWebとかCryptoもできるようになりたい。
+    </p>
+    <h2 id="4">4. 関連リンク</h2>
+     生活習慣崩壊ズのメンバー(ecasdqina, keymoon, 漁師)のwriteup:
+     <ul>
+      <li><a href="http://ecasd-qina.hatenablog.com/entry/2018/09/09/185010">CyberRebeatCTF Write-up - Ecasdqina's MEMO.</a></li>
+      <li><a href="http://keymoon.hatenablog.com/entry/2018/09/09/150028">CyberRebeat CTF Write-up 兼感想文 - 雑記</a></li>
+      <li><a href="http://kobaryo222912.hatenablog.com/entry/2018/09/09/150000">CyberRebeat CTF Write-up - kobaryo222のブログ</a></li>
+     </ul>
+  </div>
+  </body>
+</html>
